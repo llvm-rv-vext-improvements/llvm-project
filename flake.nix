@@ -29,25 +29,66 @@
             "-DGCC_INSTALL_PREFIX=${pkgs.gcc}"
             "-DC_INCLUDE_DIRS=${pkgs.stdenv.cc.libc.dev}/include"
             "-GNinja"
-            # Debug for debug builds
             "-DCMAKE_BUILD_TYPE=Release"
-            # inst will be our installation prefix
-            "-DCMAKE_INSTALL_PREFIX=../inst"
+            # "-DCMAKE_INSTALL_PREFIX=../inst"
             "-DLLVM_INSTALL_TOOLCHAIN_ONLY=ON"
-            # change this to enable the projects you need
             "-DLLVM_ENABLE_PROJECTS=clang"
-            # enable libcxx* to come into play at runtimes
-            "-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi"
-            # this makes llvm only to produce code for the current platform, this saves CPU time, change it to what you need
-            "-DLLVM_TARGETS_TO_BUILD=host"
+            "-DLLVM_ENABLE_RUNTIMES=libcxx"
+            "-DLLVM_TARGETS_TO_BUILD=RISCV"
+            "-DLIBCXXABI_USE_LLVM_UNWINDER=0"
             "-S ${self}/llvm"
         ];
+      };
+
+      packages.sim = pkgs.stdenv.mkDerivation {
+        name = "fck-china-sim";
+        outputHashAlgo = "sha256";
+        outputHash = "";
+
+        src = pkgs.fetchgit {
+          url = "https://github.com/OpenXiangShan/XiangShan.git";
+          rev = "0fb84f8ddbfc9480d870f72cc903ac6453c888c9";
+          fetchSubmodules = true;
+          leaveDotGit = true;
+          sha256 = "sha256-AVrgI/IV2ah1/s2q766XxpRmjdOxoF9Q+vKLs/yet/Q=";
+        };
+
+        nativeBuildInputs = with pkgs; [
+          mill
+          circt # for firtool
+          time
+          git
+          espresso
+        ];
+
+        buildInputs = with pkgs; [
+          verilator
+          sqlite.dev
+          zlib.dev
+          zstd.dev
+        ];
+
+        buildPhase = ''
+          # export NOOP_HOME=$out/src
+          # echo src = $src
+          # echo NOOP_HOME = $NOOP_HOME
+          # mkdir -p $NOOP_HOME
+          # cp -r $src/* $NOOP_HOME
+          # make -C $NOOP_HOME emu
+
+          export NOOP_HOME=$src
+          make emu
+        '';
+        installPhase = ''
+          cp -r build/* $out
+        '';
       };
 
       devShell = (defaultPackage.overrideAttrs (oldAttrs: {
         name = "llvm-env";
         buildInputs = oldAttrs.buildInputs ++ (with pkgs; [ verilator ]);
       }));
+
 
     });
 }
