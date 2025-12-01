@@ -17,20 +17,16 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         cat > ~/.ssh/config <<EOF
         host vityaman
-            user khaser
+            user nix-storage
             hostname 62.84.116.90
             port 22
             identityfile ~/.ssh/id_rsa
-        EOF
-        cat > ~/.ssh/known_hosts <<EOF
-        62.84.116.90 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIbaHSQm0YXY9PU5HHXDpUj9IAiUk1S2uZMlasyyCLGx
-        62.84.116.90 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCrACNKweNHyklERbzkHx2OJ9L/MUoW/Hedu6NL++iFcdrlzBtBVR3HATeZkZ+GmlxyW3kaYDJDWwcty9O8uD7zCPo+8j+Y/YcQIlWNbF2goaTTYJ6J2V02jPqZqQuUCGbFQ1lrH08gPJad9G4/7TmdhLYSzHMCphMvnKxorrmdcTJvy/fnBmZQX4q1fGUKIkVYUcSbjQc9gb+bgV94EoD2JZiRSJnE8gfoMK9VifBAUEPuvpQhVY8xRrk4XFku3E98eCy7rIUajqma4ctBv3AEsuzNhw0CzEP33IV84k3uO2BH+raahHHjMrs2EstCvqgsEF/EWGI0u/zxG3mL4vd6PvJUbtktIVl5urkMqQzI0VfV/EoGJR6AxtqAV45l6mBXQwh50gSrjPuyyRHokRwCtHZluO5ze7OnFyxcCYg4B19M1kd/keZtu+pioQrRXVzbxC6DCZvs6R6g1IgziVCO+/hrwiPdNDQJ5GrLIs2bAMaRVbBW3DfjMd/mlQskvQ0=
-        62.84.116.90 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKROTB7rEgS6kshKLHHTuFQwTawEswfNqBE/Q1jlviWnTeuirOWDgdRiPFZmBVqXcRcY9zv+6yrb/QZTx1TJtKk=
+            StrictHostKeyChecking no
         EOF
         sudo cp -rv ~runner/.ssh/* ~root/.ssh
     - name: "Test ssh connection"
       run: |
         sudo ssh -vv vityaman 'echo $(whoami)'
-    - name: "Test binary cache"
+    - name: "Get RTL-sim from binary cache & build toolchain"
       run: |
-        nix profile install /nix/store/4zc0m0f8gda04pc2b2f09zcqn4j6g002-XiangShan-0fb84f8
+        nix profile -L install ${RTL_SIM_STOREPATH}
