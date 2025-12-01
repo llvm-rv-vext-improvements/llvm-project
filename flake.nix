@@ -3,14 +3,17 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs-circt.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, nixpkgs-circt, flake-utils }:
     flake-utils.lib.eachDefaultSystem ( system:
     let
-      pkgs = import nixpkgs { inherit system; };
-      gccForLibs = pkgs.stdenv.cc.cc;
+      pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+      circt = (import nixpkgs-circt { inherit system; }).circt;
+      pkgsRV = pkgs.pkgsCross.riscv64;
+      targetLlvmLibraries = pkgsRV.llvmPackages_21;
     in rec {
 
       defaultPackage = pkgs.stdenv.mkDerivation {
@@ -42,51 +45,69 @@
 
       packages.sim = pkgs.stdenv.mkDerivation {
         name = "fck-china-sim";
-        outputHashAlgo = "sha256";
-        outputHash = "";
+        # Floating derivation!!!
+        __impure = true;
 
         src = pkgs.fetchgit {
           url = "https://github.com/OpenXiangShan/XiangShan.git";
           rev = "0fb84f8ddbfc9480d870f72cc903ac6453c888c9";
           fetchSubmodules = true;
           leaveDotGit = true;
-          sha256 = "sha256-AVrgI/IV2ah1/s2q766XxpRmjdOxoF9Q+vKLs/yet/Q=";
+          sha256 = "sha256-C+y//RJxI8FwYWCs8dmYLh8ZGVNCTAnRoiOVuY913Jg=";
+          deepClone = false;
         };
 
         nativeBuildInputs = with pkgs; [
           mill
-          circt # for firtool
           time
           git
           espresso
+          verilator
+          python3
         ];
 
         buildInputs = with pkgs; [
-          verilator
           sqlite.dev
           zlib.dev
           zstd.dev
         ];
 
         buildPhase = ''
-          # export NOOP_HOME=$out/src
-          # echo src = $src
-          # echo NOOP_HOME = $NOOP_HOME
-          # mkdir -p $NOOP_HOME
-          # cp -r $src/* $NOOP_HOME
-          # make -C $NOOP_HOME emu
+          runHook preBuild
 
-          export NOOP_HOME=$src
-          make emu
+          # Copy sources
+          export NOOP_HOME=$out/src
+          echo src = $src
+          echo NOOP_HOME = $NOOP_HOME
+          mkdir -p $NOOP_HOME
+          cp -r $src/* $src/.* $NOOP_HOME
+
+          # Patch shebangs
+          chmod u+wx -R $NOOP_HOME
+          patchShebangs --build $NOOP_HOME/scripts/
+
+          # Build
+          export _JAVA_OPTIONS="-XX:+UseZGC -XX:+ZUncommit -XX:ZUncommitDelay=30"
+          FIRTOOL=${circt}/bin/firtool JVM_XMX=20G make -j8 -C $NOOP_HOME emu
+
+          runHook postBuild
         '';
+
         installPhase = ''
-          cp -r build/* $out
+          runHook preInstall
+
+          mkdir -p $out/bin
+          chmod u+x -R $out/src/build/
+          cp $out/src/build/verilator-compile/emu $out/bin
+          rm -rf $out/src
+
+          runHook postInstall
         '';
       };
 
       devShell = (defaultPackage.overrideAttrs (oldAttrs: {
         name = "llvm-env";
-        buildInputs = oldAttrs.buildInputs ++ (with pkgs; [ verilator ]);
+        buildInputs = oldAttrs.buildInputs;
       }));
 
 
