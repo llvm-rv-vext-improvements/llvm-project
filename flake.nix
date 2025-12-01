@@ -16,32 +16,25 @@
       targetLlvmLibraries = pkgsRV.llvmPackages_21;
     in rec {
 
-      defaultPackage = pkgs.stdenv.mkDerivation {
-        name = "llvm";
+      defaultPackage = packages.toolchain;
 
-        dontUnpack = true;
-
-        buildInputs = with pkgs; [
-          python3
-          ninja
-          cmake
-        ];
-
-        cmakeFlags = [
-            "-DUSE_DEPRECATED_GCC_INSTALL_PREFIX=1"
-            "-DGCC_INSTALL_PREFIX=${pkgs.gcc}"
-            "-DC_INCLUDE_DIRS=${pkgs.stdenv.cc.libc.dev}/include"
-            "-GNinja"
-            "-DCMAKE_BUILD_TYPE=Release"
-            # "-DCMAKE_INSTALL_PREFIX=../inst"
-            "-DLLVM_INSTALL_TOOLCHAIN_ONLY=ON"
-            "-DLLVM_ENABLE_PROJECTS=clang"
-            "-DLLVM_ENABLE_RUNTIMES=libcxx"
-            "-DLLVM_TARGETS_TO_BUILD=RISCV"
-            "-DLIBCXXABI_USE_LLVM_UNWINDER=0"
-            "-S ${self}/llvm"
-        ];
-      };
+      packages.toolchain = with pkgsRV; (wrapCCWith rec {
+        cc = (targetLlvmLibraries.clang-unwrapped.override {
+                src = ./.;
+                libllvm = (targetLlvmLibraries.libllvm.override { src = ./.; });
+              });
+        # libstdcxx is taken from gcc in an ad-hoc way in cc-wrapper.
+        libcxx = null;
+        extraPackages = [ targetLlvmLibraries.compiler-rt ];
+        extraBuildCommands = ''
+          rsrc="$out/resource-root"
+          mkdir "$rsrc"
+          ln -s "${lib.getLib cc}/lib/clang/*/include" "$rsrc"
+          echo "-resource-dir=$rsrc" >> $out/nix-support/cc-cflags
+          ln -s "${targetLlvmLibraries.compiler-rt.out}/lib" "$rsrc/lib"
+          ln -s "${targetLlvmLibraries.compiler-rt.out}/share" "$rsrc/share"
+        '';
+      });
 
       packages.sim = pkgs.stdenv.mkDerivation {
         name = "fck-china-sim";
