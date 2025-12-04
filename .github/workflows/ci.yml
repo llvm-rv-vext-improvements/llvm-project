@@ -1,0 +1,32 @@
+name: "Nix storage testing"
+on:
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - uses: cachix/install-nix-action@v31
+      with:
+        extra_nix_config: |
+          substituters = ssh://vityaman?trusted=yes
+    - name: "Setup ssh key"
+      run: |
+        mkdir -p ~/.ssh/
+        echo "${{ secrets.SSH_PRIVATE_KEY_FOR_BINARY_CACHE }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        cat > ~/.ssh/config <<EOF
+        host vityaman
+            user nix-storage
+            hostname 62.84.116.90
+            port 22
+            identityfile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+        EOF
+        sudo cp -rv ~runner/.ssh/* ~root/.ssh
+    - name: "Test ssh connection"
+      run: |
+        sudo ssh -vv vityaman 'echo $(whoami)'
+    - name: "Get RTL-sim from binary cache & build toolchain"
+      run: |
+        nix profile -L install ${RTL_SIM_STOREPATH}
