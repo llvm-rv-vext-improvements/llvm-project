@@ -14,6 +14,19 @@
       circt = (import nixpkgs-circt { inherit system; }).circt;
       pkgsRV = pkgs.pkgsCross.riscv64;
       targetLlvmLibraries = pkgsRV.llvmPackages_21;
+      llvmCmakeFlags = [
+        "-DLLVM_TARGETS_TO_BUILD=RISCV"
+        "-DLLVM_ENABLE_PROJECTS=''"
+        "-DLLVM_ENABLE_RUNTIMES=''"
+        "-DLLVM_INCLUDE_UTILS=ON"
+        "-DLLVM_INCLUDE_TESTS=ON"
+        "-DLLVM_INCLUDE_TOOLS=ON"
+      ];
+      patched-libllvm =
+        (targetLlvmLibraries.libllvm.override {
+          src = ./.;
+          devExtraCmakeFlags = llvmCmakeFlags;
+        });
     in rec {
 
       defaultPackage = packages.toolchain;
@@ -21,7 +34,7 @@
       packages.toolchain = with pkgsRV; (wrapCCWith rec {
         cc = (targetLlvmLibraries.clang-unwrapped.override {
                 src = ./.;
-                libllvm = (targetLlvmLibraries.libllvm.override { src = ./.; });
+                libllvm = patched-libllvm;
               });
         # libstdcxx is taken from gcc in an ad-hoc way in cc-wrapper.
         libcxx = null;
@@ -98,11 +111,10 @@
         '';
       };
 
-      devShell = (defaultPackage.overrideAttrs (oldAttrs: {
-        name = "llvm-env";
-        buildInputs = oldAttrs.buildInputs;
-      }));
-
+      devShells.default = targetLlvmLibraries.stdenv.mkDerivation {
+        name = "devShell";
+        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+      };
 
     });
 }
