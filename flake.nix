@@ -112,8 +112,16 @@
       };
 
       devShells.default = targetLlvmLibraries.stdenv.mkDerivation {
-        name = "devShell";
+        name = "llvm-dev";
         cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+        buildInputs = with pkgs; [ verilator ];
+      };
+
+      devShells.with-builded-toolchain = targetLlvmLibraries.stdenv.mkDerivation {
+        name = "ci-builder";
+        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+        buildInputs = with pkgs; [ lit ];
+        TOOLCHAIN_PATH = "${packages.toolchain}";
       };
 
     });

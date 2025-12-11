@@ -1,6 +1,9 @@
-name: "Nix storage testing"
+name: "Regression testing CI"
 on:
   pull_request:
+env:
+  REGRESSION_TESTSUITE: test/Transforms/SLPVectorizer
+  RTL_SIM_STOREPATH: /nix/store/gdaf0kmrgmrhqs5xj7lg918jyam01imx-fck-china-sim
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -18,7 +21,7 @@ jobs:
         cat > ~/.ssh/config <<EOF
         host vityaman
             user nix-storage
-            hostname 62.84.116.90
+            hostname ${{ secrets.BINARY_CACHE_IP }}
             port 22
             identityfile ~/.ssh/id_rsa
             StrictHostKeyChecking no
@@ -30,3 +33,4 @@ jobs:
     - name: "Get RTL-sim from binary cache & build toolchain"
       run: |
         nix profile -L install ${RTL_SIM_STOREPATH}
+        nix develop -L '.#with-builded-toolchain' --command bash "lit --path $TOOLCHAIN/bin $REGRESSION_TESTSUITE"
