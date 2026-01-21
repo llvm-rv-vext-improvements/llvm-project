@@ -16,6 +16,7 @@
       targetLlvmLibraries = pkgsRV.llvmPackages_21;
       llvmCmakeFlags = [
         "-DLLVM_TARGETS_TO_BUILD=RISCV"
+        "-DCMAKE_BUILD_TYPE=Release"
         "-DLLVM_ENABLE_PROJECTS=''"
         "-DLLVM_ENABLE_RUNTIMES=''"
         "-DLLVM_INCLUDE_UTILS=ON"
@@ -113,13 +114,13 @@
 
       devShells.default = targetLlvmLibraries.stdenv.mkDerivation {
         name = "llvm-dev";
-        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+        cmakeFlags = llvmCmakeFlags;
         buildInputs = with pkgs; [ verilator ];
       };
 
       devShells.with-builded-toolchain = targetLlvmLibraries.stdenv.mkDerivation {
         name = "ci-builder";
-        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+        cmakeFlags = llvmCmakeFlags;
         buildInputs = with pkgs; [ lit ];
         TOOLCHAIN_PATH = "${packages.toolchain}";
       };

@@ -52,7 +52,7 @@ nix develop
 Then build libllvm in normal way:
 ```
 cmake $cmakeFlags -S llvm -B build
-ninja -C build
+make -C build
 ```
 
 After that, you can use built libllvm with upstream clang, which preinstalled in nix shell.
