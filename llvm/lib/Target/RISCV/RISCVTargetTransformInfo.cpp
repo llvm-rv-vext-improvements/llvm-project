@@ -38,6 +38,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned> RVVSLPRoundingPenalty(
+    "riscv-v-slp-rounding-penalty",
+    cl::desc("Extra cost for v2f64 rounding intrinsics to discourage SLP on RVV."
+             " 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
 static cl::opt<unsigned>
     RVVMinTripCount("riscv-v-min-trip-count",
                     cl::desc("Set the lower bound of a trip count to decide on "
@@ -1336,6 +1342,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::roundeven: {
     // These all use the same code.
     auto LT = getTypeLegalizationCost(RetTy);
+    if (RVVSLPRoundingPenalty && ST->hasVInstructions())
+      if (auto *FVT = dyn_cast<FixedVectorType>(RetTy))
+        if (FVT->getNumElements() == 2 && FVT->getElementType()->isDoubleTy())
+          return LT.first * RVVSLPRoundingPenalty;
     if (!LT.second.isVector() && TLI->isOperationCustom(ISD::FCEIL, LT.second))
       return LT.first * 8;
     break;
