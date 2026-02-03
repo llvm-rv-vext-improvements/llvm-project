@@ -40,9 +40,9 @@ After first LLVM build (which I'am already done) all of this packages become ava
 Firstly, you need setup ssh access to specified user **for `root` user in your system**.
 
 ```sshConfig
-host vityaman-nix-storage
+host llvm-proj-nix-storage
     user nix-storage
-    hostname 62.84.116.90
+    hostname <CHANGE ME>
     port 22
     identityfile ~/.ssh/nix-storage_id_rsa
 ```
@@ -55,7 +55,7 @@ Next, you need add our host into *substituters*.
 Usually, it can be done by adding following line into `~/.config/nix/nix.conf`:
 
 ```sshConfig
-substituters = ssh://vityaman-nix-storage
+substituters = ssh://llvm-proj-nix-storage
 ```
 
 ### Building LLVM
