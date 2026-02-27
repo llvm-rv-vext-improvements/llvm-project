@@ -16,6 +16,7 @@
       targetLlvmLibraries = pkgsRV.llvmPackages_21;
       llvmCmakeFlags = [
         "-DLLVM_TARGETS_TO_BUILD=RISCV"
+        "-DCMAKE_BUILD_TYPE=Release"
         "-DLLVM_ENABLE_PROJECTS=''"
         "-DLLVM_ENABLE_RUNTIMES=''"
         "-DLLVM_INCLUDE_UTILS=ON"
@@ -59,7 +60,7 @@
           rev = "0fb84f8ddbfc9480d870f72cc903ac6453c888c9";
           fetchSubmodules = true;
           leaveDotGit = true;
-          sha256 = "sha256-C+y//RJxI8FwYWCs8dmYLh8ZGVNCTAnRoiOVuY913Jg=";
+          sha256 = "sha256-GaPCw9rGH79yayaIIzGlEgWsLzo7D8AA5lTKM2C2kOY=";
           deepClone = false;
         };
 
@@ -94,7 +95,7 @@
 
           # Build
           export _JAVA_OPTIONS="-XX:+UseZGC -XX:+ZUncommit -XX:ZUncommitDelay=30"
-          FIRTOOL=${circt}/bin/firtool JVM_XMX=20G make -j8 -C $NOOP_HOME emu
+          FIRTOOL=${circt}/bin/firtool JVM_XMX=20G EMU_THREADS=4 make -j8 -C $NOOP_HOME emu
 
           runHook postBuild
         '';
@@ -112,8 +113,16 @@
       };
 
       devShells.default = targetLlvmLibraries.stdenv.mkDerivation {
-        name = "devShell";
-        cmakeFlags = llvmCmakeFlags ++ [ "-GNinja" ];
+        name = "llvm-dev";
+        cmakeFlags = llvmCmakeFlags;
+        buildInputs = with pkgs; [ verilator ];
+      };
+
+      devShells.with-builded-toolchain = targetLlvmLibraries.stdenv.mkDerivation {
+        name = "ci-builder";
+        cmakeFlags = llvmCmakeFlags;
+        buildInputs = with pkgs; [ lit ];
+        TOOLCHAIN_PATH = "${packages.toolchain}";
       };
 
     });
